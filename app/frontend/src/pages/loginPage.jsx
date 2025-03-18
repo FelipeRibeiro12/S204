@@ -1,40 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { db } from '../services/fireBaseConfig';
-import { doc, getDoc } from 'firebase/firestore';
+import { login } from '../services/api'; // Importe a função de login do serviço de API
 
 const LoginPage = () => {
   const [matricula, setMatricula] = useState('');
   const [senha, setSenha] = useState('');
   const [usuarios, setUsuarios] = useState([]); // Estado para armazenar os usuários cadastrados
   const [usuarioSelecionado, setUsuarioSelecionado] = useState(null); // Estado para o usuário selecionado
+  const [error, setError] = useState(''); // Estado para mensagens de erro
 
   const navigate = useNavigate();
 
-  // Função para verificar se um usuário ainda existe no Firestore
-  const verificarUsuarioNoBanco = async (matricula) => {
-    const usuarioRef = doc(db, 'alunos', matricula);
-    const usuarioDoc = await getDoc(usuarioRef);
-    return usuarioDoc.exists(); // Retorna true se o usuário existir, false caso contrário
-  };
-
-  // Carrega e verifica os usuários cadastrados ao montar o componente
+  // Função para carregar os usuários cadastrados (opcional, se ainda quiser usar a lista de usuários)
   useEffect(() => {
     const carregarUsuarios = async () => {
-      const usuariosCadastrados = JSON.parse(localStorage.getItem('usuarios')) || [];
-
-      // Verifica cada usuário no localStorage
-      const usuariosValidos = [];
-      for (const usuario of usuariosCadastrados) {
-        const usuarioExiste = await verificarUsuarioNoBanco(usuario.matricula);
-        if (usuarioExiste) {
-          usuariosValidos.push(usuario); // Adiciona à lista apenas se o usuário existir no banco
-        }
-      }
-
-      // Atualiza o localStorage com a lista de usuários válidos
-      localStorage.setItem('usuarios', JSON.stringify(usuariosValidos));
-      setUsuarios(usuariosValidos); // Atualiza o estado com os usuários válidos
+      const response = await fetch('http://localhost:5000/auth/usuarios');
+      const data = await response.json();
+      setUsuarios(data);
     };
 
     carregarUsuarios();
@@ -47,16 +29,13 @@ const LoginPage = () => {
         return;
       }
 
-      // Verifica se a senha está correta
-      if (usuarioSelecionado.senha === senha) {
-        console.log('Login bem-sucedido!');
-        navigate('/home'); // Redireciona para a tela inicial
-      } else {
-        alert('Senha incorreta!');
-      }
+      // Faz a chamada ao backend para autenticar o usuário
+      const user = await login(usuarioSelecionado.matricula, senha);
+
+      console.log('Login bem-sucedido:', user);
+      navigate('/home', { state: { user } }); // Redireciona para a home com os dados do usuário
     } catch (error) {
-      console.error('Erro ao fazer login:', error);
-      alert('Erro ao fazer login: ' + error.message);
+      setError('Matrícula ou senha incorretas');
     }
   };
 

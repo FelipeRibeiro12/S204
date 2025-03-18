@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { doc, setDoc } from "firebase/firestore";
-import { db } from "../services/fireBaseConfig";
+import { register } from '../services/api'; // Importe a função de registro do serviço de API
 
 const RegisterPage = () => {
   const [matricula, setMatricula] = useState('');
   const [senha, setSenha] = useState('');
   const [curso, setCurso] = useState(''); // Estado para armazenar o curso selecionado
+  const [error, setError] = useState(''); // Estado para mensagens de erro
 
   const navigate = useNavigate();
 
@@ -17,25 +17,14 @@ const RegisterPage = () => {
         alert('Preencha todos os campos!');
         return;
       }
-  
-      // Cria um novo dado no Firestore com a matrícula como ID
-      await setDoc(doc(db, 'alunos', matricula), {
-        matricula,
-        senha, // Em um cenário real, a senha deve ser criptografada!
-        curso,
-      });
-  
-      // Salva o usuário no localStorage
-      const usuario = { matricula, senha, curso };
-      const usuariosCadastrados = JSON.parse(localStorage.getItem('usuarios')) || [];
-      usuariosCadastrados.push(usuario);
-      localStorage.setItem('usuarios', JSON.stringify(usuariosCadastrados));
-  
-      console.log('Aluno cadastrado com sucesso!');
+
+      // Faz a chamada ao backend para cadastrar o usuário
+      const response = await register(matricula, senha, curso);
+
+      console.log('Usuário cadastrado com sucesso:', response);
       navigate('/login'); // Redireciona para a tela de login
     } catch (error) {
-      console.error('Erro ao cadastrar usuário:', error.message);
-      alert('Erro ao cadastrar usuário: ' + error.message);
+      setError('Erro ao cadastrar usuário: ' + error.message);
     }
   };
 
@@ -73,6 +62,8 @@ const RegisterPage = () => {
           value={senha}
           onChange={(e) => setSenha(e.target.value)}
         />
+
+        {error && <p style={styles.error}>{error}</p>}
         
         <button onClick={handleRegister} style={styles.button}>
           Cadastrar Usuário
@@ -91,8 +82,8 @@ const styles = {
     height: '100vh',
     width: '100vw',
     backgroundColor: '#f0f0f0',
-    margin: 0, // Remove margens
-    padding: 0, // Remove paddings
+    margin: 0,
+    padding: 0,
   },
   title: {
     fontSize: '24px',
@@ -103,44 +94,46 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     width: '100%',
-    maxWidth: '400px', // Define uma largura máxima
-    padding: '20px', // Padding interno
+    maxWidth: '400px',
+    padding: '20px',
     backgroundColor: '#f0f0f0',
-    boxSizing: 'border-box', // Garante que padding não aumente a largura
+    boxSizing: 'border-box',
   },
   input: {
     marginBottom: '10px',
-    padding: '12px', // Padding interno
+    padding: '12px',
     fontSize: '16px',
     borderRadius: '4px',
-    border: '1px solid #ccc', // Borda simples
+    border: '1px solid #ccc',
     width: '100%',
-    boxSizing: 'border-box', // Garante que padding e borda não aumentem a largura
+    boxSizing: 'border-box',
   },
   select: {
     marginBottom: '10px',
-    padding: '12px', // Padding interno
+    padding: '12px',
     fontSize: '16px',
     borderRadius: '4px',
-    border: '1px solid #ccc', // Borda simples
+    border: '1px solid #ccc',
     width: '100%',
     backgroundColor: '#fff',
-    boxSizing: 'border-box', // Garante que padding e borda não aumentem a largura
+    boxSizing: 'border-box',
   },
   button: {
-    padding: '12px', // Padding interno
+    padding: '12px',
     fontSize: '16px',
     backgroundColor: '#007bff',
     color: '#fff',
     border: 'none',
     borderRadius: '4px',
     cursor: 'pointer',
-    width: '100%', // Ocupa 100% da largura do form
-    marginBottom: '10px', // Adiciona margem inferior para espaçamento entre os botões
-    boxSizing: 'border-box', // Garante que padding e borda não aumentem a largura
+    width: '100%',
+    marginBottom: '10px',
+    boxSizing: 'border-box',
   },
-  buttonHover: {
-    backgroundColor: '#0056b3',
+  error: {
+    color: 'red',
+    fontSize: '14px',
+    marginBottom: '10px',
   },
 };
 

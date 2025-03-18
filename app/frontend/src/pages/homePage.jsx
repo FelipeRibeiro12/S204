@@ -1,67 +1,49 @@
-// src/components/Home.jsx
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const HomePage = () => {
+  const [components, setComponents] = useState([]);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const user = location.state?.user; // Dados do usuário passados no login
+
+  useEffect(() => {
+    // Buscar componentes do backend
+    fetch('http://localhost:5000/components/list')
+      .then((response) => response.json())
+      .then((data) => setComponents(data))
+      .catch((error) => console.error('Erro ao buscar componentes:', error));
+  }, []);
+
   return (
-    <div style={styles.container}>
-      <header style={styles.header}>
-        <h1 style={styles.title}>Inatel ACADEMICO</h1>
-        <input style={styles.search} type="text" placeholder="Buscar" />
-      </header>
-      <nav style={styles.nav}>
-        <button style={styles.navButton}>Avisos</button>
-        <button style={styles.navButton}>Horários</button>
-        <button style={styles.navButton}>Notas</button>
-        <button style={styles.navButton}>Frequência</button>
-        <button style={styles.navButton}>Menu</button>
-      </nav>
-      <div style={styles.content}>
-        <p>Carregando...</p>
-      </div>
+    <div>
+      <h1>Bem-vindo, {user.matricula}</h1>
+
+      {user.tipo === 'ADM' ? (
+        <div>
+          <h2>Painel do ADM</h2>
+          <button onClick={() => navigate('/add-components')}>Adicionar Componente</button>
+          <button onClick={() => navigate('/manage-components')}>Gerenciar Componentes</button>
+          <button onClick={() => navigate('/borrow-return')}>Emprestar / Devolver</button>
+        </div>
+      ) : (
+        <div>
+          <h2>Painel do Aluno</h2>
+          <button onClick={() => navigate('/search-components')}>Procurar Componentes</button>
+          <button onClick={() => navigate('/my-components')}>Meus Componentes</button>
+        </div>
+      )}
+
+      <h3>Componentes Disponíveis</h3>
+      <ul>
+        {components.map((component) => (
+          <li key={component.id}>
+            {component.nome} - Quantidade: {component.quantidade}
+          </li>
+        ))}
+      </ul>
     </div>
   );
-};
-
-const styles = {
-  container: {
-    display: 'flex',
-    flexDirection: 'column',
-    height: '100vh',
-    backgroundColor: '#f0f0f0',
-  },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '10px',
-    backgroundColor: '#007bff',
-    color: '#fff',
-  },
-  title: {
-    fontSize: '24px',
-  },
-  search: {
-    padding: '8px',
-    fontSize: '16px',
-  },
-  nav: {
-    display: 'flex',
-    justifyContent: 'space-around',
-    padding: '10px',
-    backgroundColor: '#fff',
-  },
-  navButton: {
-    padding: '10px',
-    fontSize: '16px',
-    backgroundColor: '#007bff',
-    color: '#fff',
-    border: 'none',
-    cursor: 'pointer',
-  },
-  content: {
-    flex: 1,
-    padding: '20px',
-  },
 };
 
 export default HomePage;
