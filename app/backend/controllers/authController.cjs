@@ -38,13 +38,18 @@ const register = async (req, res) => {
       return res.status(400).json({ error: 'Preencha todos os campos!' });
     }
 
-    const userRef = db.collection('usuarios').doc(matricula);
-    const userDoc = await userRef.get();
+    // Verifica se já existe um usuário com mesma matrícula e curso
+    const snapshot = await db.collection('usuarios')
+      .where('matricula', '==', matricula)
+      .where('curso', '==', curso)
+      .get();
 
-    if (userDoc.exists) {
-      return res.status(400).json({ error: 'Usuário já cadastrado!' });
+    if (!snapshot.empty) {
+      return res.status(400).json({ error: 'Já existe um usuário com essa matrícula e curso.' });
     }
 
+    // Agora salva normalmente com o ID da matrícula (ou você pode usar .add())
+    const userRef = db.collection('usuarios').doc(matricula);
     await userRef.set({
       matricula,
       senha,

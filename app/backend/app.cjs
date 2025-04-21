@@ -25,12 +25,17 @@ app.use((req, res, next) => {
   next();
 });
 
-const PORT = 5000;
-app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
-});
+if (require.main === module) {
+  const PORT = 5000;
+  app.listen(PORT, () => {
+    console.log(`Servidor rodando na porta ${PORT}`);
+  });
+}
 
 app.post('/components/add', (req, res) => {
   console.log('📩 JSON Recebido:', req.body);
   res.json({ message: 'JSON interceptado!', recebido: req.body });
 });
+
+
+module.exports = app;
