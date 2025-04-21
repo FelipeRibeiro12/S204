@@ -1,22 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { login } from '../services/api'; // Importe a função de login do serviço de API
+import { login } from '../services/api';
 
 const LoginPage = () => {
   const [matricula, setMatricula] = useState('');
   const [senha, setSenha] = useState('');
-  const [usuarios, setUsuarios] = useState([]); // Estado para armazenar os usuários cadastrados
-  const [usuarioSelecionado, setUsuarioSelecionado] = useState(null); // Estado para o usuário selecionado
-  const [error, setError] = useState(''); // Estado para mensagens de erro
+  const [usuarios, setUsuarios] = useState([]);
+  const [usuarioSelecionado, setUsuarioSelecionado] = useState(null);
+  const [error, setError] = useState('');
 
   const navigate = useNavigate();
 
-  // Função para carregar os usuários cadastrados (opcional, se ainda quiser usar a lista de usuários)
   useEffect(() => {
     const carregarUsuarios = async () => {
-      const response = await fetch('http://localhost:5000/auth/usuarios');
-      const data = await response.json();
-      setUsuarios(data);
+      try {
+        const response = await fetch('http://localhost:5000/auth/usuarios');
+        const data = await response.json();
+        setUsuarios(data);
+      } catch (err) {
+        console.error('Erro ao carregar usuários:', err);
+      }
     };
 
     carregarUsuarios();
@@ -24,16 +27,16 @@ const LoginPage = () => {
 
   const handleLogin = async () => {
     try {
+      setError(''); // Limpa erros anteriores
+      
       if (!usuarioSelecionado) {
         alert('Selecione um usuário!');
         return;
       }
 
-      // Faz a chamada ao backend para autenticar o usuário
       const user = await login(usuarioSelecionado.matricula, senha);
-
       console.log('Login bem-sucedido:', user);
-      navigate('/home', { state: { user } }); // Redireciona para a home com os dados do usuário
+      navigate('/home', { state: { user } });
     } catch (error) {
       setError('Matrícula ou senha incorretas');
     }
@@ -50,6 +53,7 @@ const LoginPage = () => {
             const usuario = usuarios.find((u) => u.matricula === e.target.value);
             setUsuarioSelecionado(usuario);
             setMatricula(usuario.matricula);
+            setError(''); // Limpa erro ao selecionar novo usuário
           }}
         >
           <option value="">Selecione um usuário</option>
@@ -65,8 +69,18 @@ const LoginPage = () => {
           type="password"
           placeholder="Senha"
           value={senha}
-          onChange={(e) => setSenha(e.target.value)}
+          onChange={(e) => {
+            setSenha(e.target.value);
+            setError(''); // Limpa erro ao digitar nova senha
+          }}
         />
+
+        {/* Exibe a mensagem de erro se existir */}
+        {error && (
+          <div style={styles.errorMessage}>
+            {error}
+          </div>
+        )}
 
         <div style={{ height: '10px' }}></div>
         
@@ -93,8 +107,8 @@ const styles = {
     height: '100vh',
     width: '100vw',
     backgroundColor: '#f0f0f0',
-    margin: 0, // Remove margens
-    padding: 0, // Remove paddings
+    margin: 0,
+    padding: 0,
   },
   title: {
     fontSize: '24px',
@@ -105,41 +119,47 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     width: '100%',
-    maxWidth: '400px', // Define uma largura máxima
-    padding: '20px', // Padding interno
+    maxWidth: '400px',
+    padding: '20px',
     backgroundColor: '#f0f0f0',
-    boxSizing: 'border-box', // Garante que padding não aumente a largura
+    boxSizing: 'border-box',
   },
   input: {
     marginBottom: '10px',
-    padding: '12px', // Padding interno
+    padding: '12px',
     fontSize: '16px',
     borderRadius: '4px',
-    border: '1px solid #ccc', // Borda simples
+    border: '1px solid #ccc',
     width: '100%',
-    boxSizing: 'border-box', // Garante que padding e borda não aumentem a largura
+    boxSizing: 'border-box',
   },
   select: {
     marginBottom: '10px',
-    padding: '12px', // Padding interno
+    padding: '12px',
     fontSize: '16px',
     borderRadius: '4px',
-    border: '1px solid #ccc', // Borda simples
+    border: '1px solid #ccc',
     width: '100%',
     backgroundColor: '#fff',
-    boxSizing: 'border-box', // Garante que padding e borda não aumentem a largura
+    boxSizing: 'border-box',
   },
   button: {
-    padding: '12px', // Padding interno
+    padding: '12px',
     fontSize: '16px',
     backgroundColor: '#007bff',
     color: '#fff',
     border: 'none',
     borderRadius: '4px',
     cursor: 'pointer',
-    width: '100%', // Ocupa 100% da largura do form
-    marginBottom: '10px', // Adiciona margem inferior para espaçamento entre os botões
-    boxSizing: 'border-box', // Garante que padding e borda não aumentem a largura
+    width: '100%',
+    marginBottom: '10px',
+    boxSizing: 'border-box',
+  },
+  errorMessage: {
+    color: 'red',
+    fontSize: '14px',
+    marginBottom: '10px',
+    textAlign: 'center',
   },
 };
 

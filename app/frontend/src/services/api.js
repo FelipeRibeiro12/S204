@@ -1,4 +1,4 @@
-// src/services/api.js
+// frontend/src/services/api.js
 const { signInWithCustomToken } = require('firebase/auth');
 const { auth } = require('./fireBaseConfig.js');
 
