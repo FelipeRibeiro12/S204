@@ -4,50 +4,38 @@ const auth = require('../services/authService.cjs');
 
 // Adicionar um novo componente (apenas ADM)
 const addComponent = async (req, res) => {
-  const { id, tipo, especificacao, quantidade } = req.body;
-
+  const { id, tipo, especificacao } = req.body;
 
   try {
     if (!id || typeof id !== 'string' || id.trim() === '') {
-      console.log('ID inválido recebido:', id);
+      console.log('❌ ID inválido:', id);
       return res.status(400).json({ error: 'ID inválido. O ID deve ser uma string não vazia!' });
     }
 
-    if (!tipo || !especificacao || !quantidade) {
+    if (!tipo || !especificacao ) {
+      console.log('❌ Campos incompletos:', { tipo, especificacao });
       return res.status(400).json({ error: 'Preencha todos os campos, incluindo o ID!' });
     }
 
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) {
-      return res.status(401).json({ error: 'Token não fornecido' });
-    }
-
-    const decodedToken = await auth.verifyIdToken(token);
-    if (decodedToken.tipo !== 'ADM') {
+    if (req.user.tipo !== 'ADM') {
+      console.log('❌ Usuário não é ADM:', req.user.tipo);
       return res.status(403).json({ error: 'Apenas administradores podem adicionar componentes' });
     }
 
-    // ⚠️ Verifique se o ID contém apenas caracteres válidos para o Firestore
     if (!/^[a-zA-Z0-9-_]+$/.test(id)) {
+      console.log('❌ ID com caracteres inválidos:', id);
       return res.status(400).json({ error: 'O ID contém caracteres inválidos para o Firestore!' });
     }
 
-    const componentRef = db.collection('componentes').doc(id.trim()); // 🔹 Trim para evitar espaços em branco
+    const componentRef = db.collection('componentes').doc(id.trim());
+    console.log('📝 Gravando no Firestore:', { id, tipo, especificacao });
 
-    await componentRef.set({
-      id,
-      tipo,
-      especificacao,
-      quantidade,
-    });
+    await componentRef.set({ id, tipo, especificacao });
 
-    res.json({
-      id,
-      tipo,
-      especificacao,
-      quantidade
-    });
+    console.log('✅ Componente salvo com sucesso!');
+    res.json({ id, tipo, especificacao });
   } catch (error) {
+    console.error('🔥 Erro ao adicionar componente:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -64,7 +52,6 @@ const listComponents = async (req, res) => {
         doc.id,
         componentData.tipo,
         componentData.especificacao,
-        componentData.quantidade,
         componentData.emprestadoPara
       );
       components.push(component);

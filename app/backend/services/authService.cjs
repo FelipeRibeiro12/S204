@@ -1,8 +1,7 @@
-// backend/services/authService.cjs
 const admin = require('firebase-admin');
 const serviceAccount = require('../config/serviceAccountKey.json');
 
-// Inicializa o Firebase Admin (se ainda não estiver inicializado)
+// Inicialização do Firebase Admin
 if (!admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
@@ -10,45 +9,66 @@ if (!admin.apps.length) {
 }
 
 const db = admin.firestore();
-const auth = admin.auth(); // 💡 Definição correta do auth
+const auth = admin.auth();
 
-// Função para gerar token personalizado
 const generateCustomToken = async (uid, tipo) => {
   try {
-    const customToken = await auth.createCustomToken(uid, { tipo }); // Agora auth está definido corretamente
-    return customToken;
+    // Incluindo as claims extras, se quiser
+    const additionalClaims = {
+      tipo: tipo
+    };
+
+    const token = await auth.createCustomToken(uid, additionalClaims);
+    return token;
   } catch (error) {
     console.error('Erro ao gerar token personalizado:', error);
     throw error;
   }
 };
 
-// Função para verificar o usuário
 const verificarUsuario = async (matricula, senha) => {
   try {
-    // Busca o usuário no Firestore usando a matrícula como ID
     const userRef = db.collection('usuarios').doc(matricula);
     const userDoc = await userRef.get();
 
     if (!userDoc.exists) {
-      return null; // Usuário não encontrado
+      return null;
     }
 
     const userData = userDoc.data();
 
-    // Verifica se a senha está correta
+    // Comparação segura de senha (considerando que está em texto plano por enquanto)
     if (userData.senha === senha) {
       return {
-        uid: userData.matricula, // Usa a matrícula como UID
-        tipo: userData.tipo, // Tipo do usuário (ex: 'ADM', 'ALUNO')
+        uid: userData.matricula,
+        tipo: userData.tipo,
+        curso: userData.curso || ''
       };
-    } else {
-      return null; // Senha incorreta
     }
+    return null;
   } catch (error) {
     console.error('Erro ao verificar usuário:', error);
     throw error;
   }
 };
 
-module.exports = { generateCustomToken, verificarUsuario};
+// Função adicional para obter dados completos do usuário
+const obterDadosUsuario = async (matricula) => {
+  try {
+    const userDoc = await db.collection('usuarios').doc(matricula).get();
+    if (!userDoc.exists) {
+      return null;
+    }
+    return userDoc.data();
+  } catch (error) {
+    console.error('Erro ao obter dados do usuário:', error);
+    throw error;
+  }
+};
+
+module.exports = { 
+  generateCustomToken, 
+  verificarUsuario, 
+  obterDadosUsuario,
+  auth 
+};

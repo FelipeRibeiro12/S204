@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { login } from '../services/api';
+import { signInWithCustomToken } from 'firebase/auth';
+import { auth } from '../services/fireBaseConfig';
 
 const LoginPage = () => {
   const [matricula, setMatricula] = useState('');
@@ -26,21 +28,47 @@ const LoginPage = () => {
   }, []);
 
   const handleLogin = async () => {
-    try {
-      setError(''); // Limpa erros anteriores
-      
-      if (!usuarioSelecionado) {
-        alert('Selecione um usuário!');
-        return;
-      }
+  try {
+    setError('');
 
-      const user = await login(usuarioSelecionado.matricula, senha);
-      console.log('Login bem-sucedido:', user);
-      navigate('/home', { state: { user } });
-    } catch (error) {
-      setError('Matrícula ou senha incorretas');
+    if (!usuarioSelecionado) {
+      alert('Selecione um usuário!');
+      return;
     }
-  };
+
+    const response = await fetch('http://localhost:5000/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ matricula: usuarioSelecionado.matricula, senha }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Erro no login');
+    }
+
+    const dados = await response.json();
+    console.log('Dados recebidos:', dados);
+
+    await signInWithCustomToken(auth, dados.token);
+    console.log('Login Firebase concluído!');
+    console.log('Usuário Firebase:', auth.currentUser);
+
+    if (dados.token) {
+    // Salva os dados do usuário no localStorage
+    localStorage.setItem('user', JSON.stringify({
+      matricula: dados.matricula,
+      tipo: dados.tipo,
+      token: dados.token,
+    }));
+  }
+
+    navigate('/home');
+  } catch (error) {
+    console.error('Erro no login:', error);
+    setError(error.message || 'Matrícula ou senha incorretas');
+  }
+};
 
   return (
     <div style={styles.container}>

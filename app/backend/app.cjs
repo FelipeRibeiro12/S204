@@ -32,10 +32,4 @@ if (require.main === module) {
   });
 }
 
-app.post('/components/add', (req, res) => {
-  console.log('📩 JSON Recebido:', req.body);
-  res.json({ message: 'JSON interceptado!', recebido: req.body });
-});
-
-
 module.exports = app;

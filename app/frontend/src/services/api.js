@@ -1,119 +1,128 @@
-// frontend/src/services/api.js
-const { signInWithCustomToken } = require('firebase/auth');
-const { auth } = require('./fireBaseConfig.js');
+import axios from 'axios';
+import { signInWithCustomToken } from 'firebase/auth';
+import { auth } from './fireBaseConfig.js';
 
 const API_BASE_URL = 'http://localhost:5000';
-console.log('Usuário logado:', auth.currentUser);
 
-const login = async (matricula, senha) => {
+const api = axios.create({
+  baseURL: API_BASE_URL,
+});
+
+// LOGIN
+export const login = async (matricula, senha) => {
   try {
-    // Faz a requisição para o backend para obter o token personalizado
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ matricula, senha }),
-    });
+    const response = await api.post('/auth/login', { matricula, senha });
+    console.log('Resposta do backend:', response.data);
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Erro ao fazer login');
+    const customToken = response.data.token;
+    if (!customToken) {
+      throw new Error('Resposta inválida do servidor');
     }
 
-    const data = await response.json();
+    await signInWithCustomToken(auth, customToken);
 
-    // Autentica o usuário no Firebase usando o token personalizado
-    await signInWithCustomToken(auth, data.token);
+    const user = await new Promise((resolve, reject) => {
+      const unsubscribe = auth.onAuthStateChanged((user) => {
+        unsubscribe();
+        if (user) resolve(user);
+        else reject(new Error('Falha ao obter usuário autenticado'));
+      });
+    });
 
-    console.log('Usuário autenticado com sucesso!');
-    return data; // Retorna os dados do usuário
+    const idToken = await user.getIdToken();
+
+    return {
+      token: idToken,
+      usuario: {
+        tipo: response.data.tipo,
+        curso: response.data.curso,
+        matricula: response.data.matricula
+      }
+    };
+
   } catch (error) {
-    console.error('Erro no login:', error);
+    console.error('Erro ao fazer login:', error);
     throw error;
   }
 };
 
-const register = async (matricula, senha, curso) => {
-  const response = await fetch(`${API_BASE_URL}/auth/register`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ matricula, senha, curso }),
-  });
-  return response.json();
+// REGISTER
+export const register = async (matricula, senha, curso) => {
+  try {
+    const response = await api.post('/auth/register', { matricula, senha, curso });
+    return response.data;
+  } catch (error) {
+    console.error('Erro ao registrar usuário:', error);
+    throw error;
+  }
 };
 
-const listComponents = async () => {
-  const response = await fetch(`${API_BASE_URL}/components/list`);
-  return response.json();
+// LISTAR COMPONENTES
+export const listComponents = async () => {
+  try {
+    const response = await api.get('/components/list');
+    return response.data;
+  } catch (error) {
+    console.error('Erro ao listar componentes:', error);
+    throw error;
+  }
 };
 
-const addComponent = async (id, tipo, especificacao, quantidade) => {
+// ADICIONAR COMPONENTE
+export const addComponent = async (id, tipo, especificacao) => {
   try {
     const user = auth.currentUser;
-    if (!user) {
-      throw new Error('Usuário não autenticado');
-    }
-
     const token = await user.getIdToken();
-    
-    console.log('Token:', token);
-    console.log('Recebidos no frontend:', id, tipo, especificacao, quantidade);
 
-    const response = await fetch(`${API_BASE_URL}/components/add`, {
-      method: 'POST',
+    const componente = { id, tipo, especificacao };
+
+    const response = await api.post('/components/add', componente, {
       headers: {
-        'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ id, tipo, especificacao, quantidade }),
     });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Erro ao adicionar componente');
-    }
-
-    const data = await response.json();
-    console.log("✅ Resposta da API:", data);
-
-    return data;
+    return response.data;
   } catch (error) {
-    console.error('Erro na requisição:', error.message);
+    console.error('Erro ao adicionar componente:', error);
     throw error;
   }
 };
 
+// EMPRESTAR COMPONENTE
+export const borrowComponent = async (componentId) => {
+  try {
+    const user = auth.currentUser;
+    const token = await user.getIdToken();
 
-const borrowComponent = async (componentId, matricula) => {
-  const response = await fetch(`${API_BASE_URL}/components/borrow`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ componentId, matricula }),
-  });
-  return response.json();
+    const emprestimo = { componentId };
+
+    const response = await api.post('/emprestimos', emprestimo, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Erro ao registrar empréstimo:', error);
+    throw error;
+  }
 };
 
-const returnComponent = async (componentId) => {
-  const response = await fetch(`${API_BASE_URL}/components/return`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ componentId }),
-  });
-  return response.json();
-};
+// DEVOLVER COMPONENTE
+export const returnComponent = async (componentId) => {
+  try {
+    const user = auth.currentUser;
+    const token = await user.getIdToken();
 
-module.exports = {
-  login,
-  register,
-  listComponents,
-  addComponent,
-  borrowComponent,
-  returnComponent,
+    const response = await api.post('/components/return', { componentId }, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Erro ao devolver componente:', error);
+    throw error;
+  }
 };

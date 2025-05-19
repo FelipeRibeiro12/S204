@@ -4,7 +4,6 @@ class Component {
       this.id = id;
       this.tipo = tipo;
       this.especificacao = especificacao;
-      this.quantidade = quantidade;
       this.emprestadoPara = emprestadoPara; // Matrícula do aluno que pegou emprestado
     }
   }

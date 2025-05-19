@@ -1,32 +1,36 @@
-// backend/middlewares/authMiddleware.js
 const { db } = require('../services/fireBaseConfig.cjs');
+const { auth } = require('../services/authService.cjs');
 
 const authenticate = async (req, res, next) => {
-  const { matricula } = req.body;
+  console.log('Header Authorization:', req.headers.authorization);
+  const header = req.headers.authorization;
+
+  if (!header || !header.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Token não fornecido' });
+  }
+
+  const token = header.replace('Bearer ', '');
 
   try {
-    const userRef = db.collection('usuarios').doc(matricula);
-    const userDoc = await userRef.get();
-
-    if (!userDoc.exists) {
-      return res.status(404).json({ error: 'Usuário não encontrado' });
-    }
-
-    const userData = userDoc.data();
-    req.user = userData;
+    const decodedToken = await auth.verifyIdToken(token);
+    console.log(decodedToken);
+    req.user = decodedToken;
     next();
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    return res.status(401).json({ error: 'Token inválido' });
   }
 };
 
 const isAdmin = (req, res, next) => {
-  const { tipo } = req.user;
+  console.log('🛡️ Checando se o usuário é ADM');
+  const { tipo } = req.user || {};
 
   if (tipo !== 'ADM') {
-    return res.status(403).json({ error: 'Acesso negado' });
+    console.log('❌ Acesso negado: tipo do usuário:', tipo);
+    return res.status(403).json({ error: 'Acesso negado. Apenas administradores.' });
   }
 
+  console.log('✅ Usuário autorizado como ADM');
   next();
 };
 
